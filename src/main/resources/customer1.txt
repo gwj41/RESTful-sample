@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Customer weight="90">
+    <id>124</id>
+    <firstName>Wen jun2</firstName>
+    <lastName>Gu2</lastName>
+    <address>
+        <street>Yu Shan</street>
+        <city>Suzhou</city>
+        <zip>215000</zip>
+        <state>Jiang Su</state>
+    </address>
+</Customer>
