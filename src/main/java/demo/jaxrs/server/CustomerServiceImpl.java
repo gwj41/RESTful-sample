@@ -28,7 +28,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.*;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.transform.TransformerFactory;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
