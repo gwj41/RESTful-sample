@@ -23,6 +23,6 @@ public class ObserverTest {
         ConcreteWeatherSubject subject = new ConcreteWeatherSubject();
         subject.addObserver(observer1);
         subject.addObserver(observer2);
-        subject.setContent("今天提前下班");
+        subject.setContent("Go home early today!!!");
     }
 }

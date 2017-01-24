@@ -5,15 +5,22 @@
 <beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:jaxrs="http://cxf.apache.org/jaxrs"
        xmlns:cxf="http://cxf.apache.org/core"
+       xmlns:context="http://www.springframework.org/schema/context"
        xmlns="http://www.springframework.org/schema/beans"
        xsi:schemaLocation="
-         http://www.springframework.org/schema/beans 
-         http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+         http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context
+         http://www.springframework.org/schema/context/spring-context.xsd
          http://cxf.apache.org/jaxrs
          http://cxf.apache.org/schemas/jaxrs.xsd
          http://cxf.apache.org/core
          http://cxf.apache.org/schemas/core.xsd">
 
+    <!--<import resource="classpath*:jaxrs-config/non-singleton-config.xml"/>-->
+    <import resource="classpath*:jaxrs-config/singleton-config.xml"/>
+    <!--<bean class="demo.jaxrs.utils.Pretty" abstract="true"/>-->
+    <context:component-scan base-package="demo.jaxrs.utils"/>
     <!-- CXF Logging Feature -->
     <bean id="loggingFeature" class="org.apache.cxf.feature.LoggingFeature"/>
     <!--
@@ -22,30 +29,11 @@
     <!--
     <bean id="jacksonJaxbJsonProvider" class="org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider" />
     -->
-
-    <bean id="jacksonJsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider"/>
-
+    <bean id="jacksonJsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider">
+    </bean>
+    <bean id="jacksonJaxbJsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
     <bean id="customerService" class="demo.jaxrs.server.CustomerServiceImpl"/>
     <bean id="customerHtmlFormWriter" class="demo.jaxrs.server.CustomerHtmlFormWriter"/>
     <bean id="entityNotFoundMapper" class="demo.jaxrs.server.EntityNotFoundMapper"/>
-    <jaxrs:server id="customerServer" address="/info">
-        <jaxrs:serviceBeans>
-            <ref bean="customerService"/>
-        </jaxrs:serviceBeans>
-        <jaxrs:providers>
-            <ref bean="jacksonJsonProvider"/>
-            <ref bean="customerHtmlFormWriter"/>
-            <ref bean="entityNotFoundMapper"/>
-        </jaxrs:providers>
-        <jaxrs:features>
-            <cxf:logging/>
-        </jaxrs:features>
-        <!--
-        <jaxrs:extensionMappings>
-            <entry key="json" value="application/json"/>
-            <entry key="xml" value="application/xml"/>
-        </jaxrs:extensionMappings>
-        -->
-    </jaxrs:server>
 </beans>
 

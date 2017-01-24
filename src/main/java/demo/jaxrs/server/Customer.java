@@ -18,6 +18,7 @@
  */
 package demo.jaxrs.server;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.ws.rs.FormParam;
@@ -27,6 +28,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Date;
 
 @XmlRootElement(name = "Customer")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -40,6 +42,8 @@ public class Customer {
     private String firstName;
     @FormParam("lastName")
     private String lastName;
+    @JsonFormat(pattern="yyyy-MM-dd",timezone = "GMT+8")
+    private Date birthday;
     private Address address;
     @HeaderParam("Content-Type")
     private String contentType;
@@ -74,6 +78,14 @@ public class Customer {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public Date getBirthday() {
+        return birthday;
+    }
+
+    public void setBirthday(Date birthday) {
+        this.birthday = birthday;
     }
 
     public Address getAddress() {

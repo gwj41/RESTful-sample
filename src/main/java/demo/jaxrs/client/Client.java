@@ -39,7 +39,6 @@ public final class Client {
     }
 
     public static void main(String args[]) throws Exception {
-        Client client = new Client();
         // Sent HTTP GET request to query all customer info
         /*
          * URL url = new URL("http://localhost:9000/customers");
@@ -63,7 +62,8 @@ public final class Client {
 
         System.out.println("Sent WebClient test...");
         WebClient client1 = WebClient.create(BASE_LOCATION);
-        System.out.println(client1.path("customerservice/customers/{id};gender=male","123").accept(MediaType.APPLICATION_XML).get(String.class));
+        client1 = client1.path("customerservice/customers/{id};gender=male","123").accept(MediaType.APPLICATION_XML);
+        System.out.println(client1.get(String.class));
 
         System.out.println("Return complex type List");
         client1 = WebClient.create(BASE_LOCATION);
@@ -108,7 +108,8 @@ public final class Client {
         System.out.println(client1.path("customerservice/customers/json2/{id}", "123").accept(MediaType.APPLICATION_JSON).get(String.class));
 
         System.out.println("Add customer test...");
-        String inputFile = client.getClass().getResource("/customer.txt").getFile();
+//        Thread.currentThread().getClass().getClassLoader().getResourceAsStream("/customer.txt");
+        String inputFile = Thread.currentThread().getContextClassLoader().getResource("customer.txt").getFile();
         File input = new File(inputFile);
         client1 = WebClient.create(BASE_LOCATION);
         client1.type("application/json;charset=UTF-8");
@@ -121,7 +122,7 @@ public final class Client {
         response.close();
 
         System.out.println("Add customer1 test...");
-        String inputFile1 = client.getClass().getResource("/customer1.txt").getFile();
+        String inputFile1 = Thread.currentThread().getContextClassLoader().getResource("customer1.txt").getFile();
         File input1 = new File(inputFile1);
         client1 = WebClient.create(BASE_LOCATION);
         client1.type("application/xml;charset=UTF-8");

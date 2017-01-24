@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+       xmlns:cxf="http://cxf.apache.org/core"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://cxf.apache.org/jaxrs
+         http://cxf.apache.org/schemas/jaxrs.xsd
+         http://cxf.apache.org/core
+         http://cxf.apache.org/schemas/core.xsd">
+    <bean id="non-singleton" class="org.apache.cxf.jaxrs.JAXRSServerFactoryBean" init-method="create">
+        <property name="address" value="/service1"/>
+        <property name="serviceBeans">
+            <ref bean="customerService" />
+        </property>
+    </bean>
+    <jaxrs:server id="customerServer" address="/info">
+        <jaxrs:executor><ref bean="non-singleton"/></jaxrs:executor>
+
+        <jaxrs:providers>
+            <ref bean="jacksonJsonProvider"/>
+            <ref bean="customerHtmlFormWriter"/>
+            <ref bean="entityNotFoundMapper"/>
+        </jaxrs:providers>
+        <jaxrs:features>
+            <cxf:logging/>
+        </jaxrs:features>
+        <!--
+        <jaxrs:extensionMappings>
+            <entry key="json" value="application/json"/>
+            <entry key="xml" value="application/xml"/>
+        </jaxrs:extensionMappings>
+        -->
+    </jaxrs:server>
+</beans>

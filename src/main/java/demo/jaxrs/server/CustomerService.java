@@ -1,9 +1,12 @@
 package demo.jaxrs.server;
 
+import demo.jaxrs.utils.Pretty;
+
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.io.File;
-import java.net.URI;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -11,19 +14,20 @@ import java.util.Map;
 /**
  * Created by wgu on 9/2/2015.
  */
-@Path("/customerservice/")
+@Path("/customerservice")
 //@Produces("text/xml")
 @Produces("application/xml")
 public interface CustomerService {
     @GET
-    @Path("/customers/{id}/")
-    @Produces("application/xml")
+    @Path("customers/{id}")
+    @Produces(MediaType.APPLICATION_XML)
+    @Pretty
     Customer getCustomer(@PathParam("id") PathSegment id);
 
-    @GET
-    @Path("/singleCustomer/")
-    @Produces(MediaType.TEXT_HTML)
-    Customer getSingleCustomer();
+    @POST
+    @Path("/customer/stream")
+    @Produces(MediaType.APPLICATION_JSON)
+    Customer addCustomerByStream(InputStream inputStream) throws IOException;
 
     @GET
     @Path("/customers/streamingOutput/{id}")
@@ -81,8 +85,10 @@ public interface CustomerService {
     Response getCustomer7();
 
     @PUT
-    @Path("/customers/")
-    Response updateCustomer(Customer customer);
+    @Path("/customers/{id}")
+    @Consumes({MediaType.APPLICATION_JSON,MediaType.APPLICATION_XML})
+    @Produces("application/json")
+    Response updateCustomer(@PathParam("id") long id,Customer customer);
 
     @POST
     @Path("/customers/")
@@ -104,8 +110,9 @@ public interface CustomerService {
     MultivaluedMap<String,String> addCustomerWithMultiValuedMap(MultivaluedMap<String,String> form);
 
     @POST
-    @Path("/customers/form/bean")
-    @Produces("application/json")
+    @Path("/customers/bean")
+    @Consumes({MediaType.APPLICATION_JSON,MediaType.APPLICATION_XML,MediaType.APPLICATION_FORM_URLENCODED})
+    @Produces(MediaType.APPLICATION_JSON)
     Response addCustomer2(@BeanParam Customer customer);
 
     @DELETE
@@ -115,4 +122,24 @@ public interface CustomerService {
     @GET
     @Path("/orders/{orderId}/")
     Order getOrder(@PathParam("orderId") String orderId);
+
+    @GET
+    @Path("/cars/{make}/{model:.*}/year/{year}")
+    @Produces(MediaType.TEXT_PLAIN)
+    File getPictureWithPathSegmentList(@PathParam("make") String make,@PathParam("model") List<PathSegment> model,@PathParam("year") int year);
+
+    @GET
+    @Path("/cars/{make}/{model}/year/{year}/")
+    @Produces({MediaType.APPLICATION_JSON})
+    Car getPictureWithPathSegment(@PathParam("make") String make,@PathParam("model") PathSegment model,@PathParam("year") int year,@Context UriInfo uriInfo);
+
+    @GET
+    @Path("/cars/{model:.*}")
+    @Produces(MediaType.APPLICATION_JSON)
+    Car getPictureWithPathSegmentList(@PathParam("model") List<PathSegment> model);
+
+    @GET
+    @Path("customers/generic")
+    @Produces(MediaType.APPLICATION_JSON)
+    Response getCustomerList();
 }

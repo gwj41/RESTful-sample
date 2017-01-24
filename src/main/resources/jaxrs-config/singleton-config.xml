@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+       xmlns:cxf="http://cxf.apache.org/core"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns="http://www.springframework.org/schema/beans" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://cxf.apache.org/jaxrs
+        http://cxf.apache.org/schemas/jaxrs.xsd
+        http://cxf.apache.org/core
+        http://cxf.apache.org/schemas/core.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    <jaxrs:server id="customerServer" address="/info">
+        <jaxrs:serviceBeans>
+            <ref bean="customerService"/>
+        </jaxrs:serviceBeans>
+        <jaxrs:providers>
+            <!--<ref bean="jacksonJsonProvider"/>-->
+            <ref bean="jacksonJaxbJsonProvider"/>
+            <ref bean="customerHtmlFormWriter"/>
+            <ref bean="entityNotFoundMapper"/>
+            <ref bean="jaxbProvider"/>
+        </jaxrs:providers>
+        <jaxrs:features>
+            <cxf:logging/>
+        </jaxrs:features>
+<!--        <jaxrs:dataBinding>
+            <ref bean="jaxrs-data-binding-jaxbCustomProvider"/>
+        </jaxrs:dataBinding>-->
+        <!--
+        <jaxrs:extensionMappings>
+            <entry key="json" value="application/json"/>
+            <entry key="xml" value="application/xml"/>
+        </jaxrs:extensionMappings>
+        -->
+    </jaxrs:server>
+<!--    <bean id="jaxrs-data-binding-jaxbCustomProvider" class="org.apache.cxf.jaxrs.provider.JAXRSDataBinding">
+        <property name="provider" ref="jaxbCustomProvider"/>
+    </bean>-->
+<!--    <bean id="jsonProvider" class="org.apache.cxf.jaxrs.provider.JSONProvider">
+        <property name="dropRootElement" value="true"/>
+        <property name="dropCollectionWrapperElement" value="true"/>
+        <property name="serializeAsArray" value="true"/>
+    </bean>-->
+    <bean id="jaxbProvider" class="org.apache.cxf.jaxrs.provider.JAXBElementProvider">
+        <property name="marshallerProperties" ref="propertiesMap"/>
+    </bean>
+    <util:map id="propertiesMap">
+        <entry key="jaxb.formatted.output">
+            <value type="java.lang.Boolean">true</value>
+        </entry>
+    </util:map>
+    <bean id="jaxbCustomProvider" class="demo.jaxrs.utils.JAXBProvider"/>
+    <bean id="jaxbMarshaller" class="demo.jaxrs.utils.JAXBMarshaller"/>
+    <bean id="jaxbUnMarshaller" class="demo.jaxrs.utils.JAXBUnmarshaller"/>
+    <!--CGLIB proxy-->
+    <!--<aop:config proxy-target-class="true">-->
+    <aop:config>
+        <aop:aspect id="loggingAspect" ref="simpleLogger">
+            <aop:before method="logBefore"
+                        pointcut="execution(* demo.jaxrs.server.CustomerService*.*(..))"/>
+            <aop:after-returning method="logAfter"
+                                 pointcut="execution(* demo.jaxrs.server.CustomerService*.*(..))"/>
+        </aop:aspect>
+    </aop:config>
+    <bean id="simpleLogger"
+          class="demo.jaxrs.server.SimpleLoggingAspect"/>
+</beans>
