@@ -1,5 +1,7 @@
 package demo.jaxrs.utils;
 
+import demo.jaxrs.utils.annotation.Pretty;
+
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;

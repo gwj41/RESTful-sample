@@ -1,5 +1,6 @@
 package demo.jaxrs.utils;
 
+import demo.jaxrs.utils.annotation.Pretty;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.annotation.AnnotationUtils;

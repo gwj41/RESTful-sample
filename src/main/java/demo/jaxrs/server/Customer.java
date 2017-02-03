@@ -19,21 +19,27 @@
 package demo.jaxrs.server;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.ws.rs.core.Link;
+import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @XmlRootElement(name = "Customer")
 @XmlAccessorType(XmlAccessType.FIELD)
 @Path("/customers")
 public class Customer {
+    @XmlElement(name="link")
+    @XmlJavaTypeAdapter(Link.JaxbAdapter.class)
+    private List<Link> links = new ArrayList<>();
     @JsonProperty(required = true)
     private long id;
     @XmlAttribute
@@ -47,6 +53,18 @@ public class Customer {
     private Address address;
     @HeaderParam("Content-Type")
     private String contentType;
+    @JsonIgnore
+    private String jsonIgnore;
+    @XmlTransient
+    private String xmlIgnore;
+
+    public List<Link> getLinks() {
+        return links;
+    }
+
+    public void setLinks(List<Link> links) {
+        this.links = links;
+    }
 
     public long getId() {
         return id;
@@ -63,7 +81,8 @@ public class Customer {
     public void setWeight(String weight) {
         this.weight = weight;
     }
-
+    @GET
+    @Path("firstName")
     public String getFirstName() {
         return firstName;
     }
@@ -102,5 +121,31 @@ public class Customer {
 
     public void setContentType(String contentType) {
         this.contentType = contentType;
+    }
+
+    public String getJsonIgnore() {
+        return jsonIgnore;
+    }
+
+    public void setJsonIgnore(String jsonIgnore) {
+        this.jsonIgnore = jsonIgnore;
+    }
+
+    public String getXmlIgnore() {
+        return xmlIgnore;
+    }
+
+    public void setXmlIgnore(String xmlIgnore) {
+        this.xmlIgnore = xmlIgnore;
+    }
+
+    @GET
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                '}';
     }
 }

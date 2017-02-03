@@ -16,11 +16,17 @@
             <ref bean="customerService"/>
         </jaxrs:serviceBeans>
         <jaxrs:providers>
+            <!--<ref bean="bearerTokenFilter"/>-->
             <!--<ref bean="jacksonJsonProvider"/>-->
             <ref bean="jacksonJaxbJsonProvider"/>
             <ref bean="customerHtmlFormWriter"/>
             <ref bean="entityNotFoundMapper"/>
             <ref bean="jaxbProvider"/>
+
+            <!--<ref bean="maxAgeFeature"/>-->
+            <!--<ref bean="gzipEncoder"/>-->
+            <!--<ref bean="gzipInInterceptor"/>-->
+            <!--<ref bean="gzipOutInterceptor"/>-->
         </jaxrs:providers>
         <jaxrs:features>
             <cxf:logging/>
@@ -38,20 +44,21 @@
 <!--    <bean id="jaxrs-data-binding-jaxbCustomProvider" class="org.apache.cxf.jaxrs.provider.JAXRSDataBinding">
         <property name="provider" ref="jaxbCustomProvider"/>
     </bean>-->
-<!--    <bean id="jsonProvider" class="org.apache.cxf.jaxrs.provider.JSONProvider">
-        <property name="dropRootElement" value="true"/>
-        <property name="dropCollectionWrapperElement" value="true"/>
-        <property name="serializeAsArray" value="true"/>
-    </bean>-->
     <bean id="jaxbProvider" class="org.apache.cxf.jaxrs.provider.JAXBElementProvider">
         <property name="marshallerProperties" ref="propertiesMap"/>
     </bean>
+    <bean id="bearerTokenFilter" class="demo.jaxrs.utils.provider.BearerTokenFilter"/>
+    <bean id="maxAgeFeature" class="demo.jaxrs.utils.provider.MaxAgeFeature"/>
+    <bean id="gzipInInterceptor" class="org.apache.cxf.transport.common.gzip.GZIPInInterceptor"/>
+    <bean id="gzipOutInterceptor" class="org.apache.cxf.transport.common.gzip.GZIPOutInterceptor"/>
+    <bean id="gzipDecoder" class="demo.jaxrs.utils.GZIPDecoder"/>
+    <bean id="gzipEncoder" class="demo.jaxrs.utils.GZIPEncoder"/>
     <util:map id="propertiesMap">
         <entry key="jaxb.formatted.output">
             <value type="java.lang.Boolean">true</value>
         </entry>
     </util:map>
-    <bean id="jaxbCustomProvider" class="demo.jaxrs.utils.JAXBProvider"/>
+    <bean id="jaxbCustomProvider" class="demo.jaxrs.utils.provider.JAXBProvider"/>
     <bean id="jaxbMarshaller" class="demo.jaxrs.utils.JAXBMarshaller"/>
     <bean id="jaxbUnMarshaller" class="demo.jaxrs.utils.JAXBUnmarshaller"/>
     <!--CGLIB proxy-->

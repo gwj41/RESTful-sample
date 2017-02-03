@@ -1,4 +1,6 @@
-package demo.jaxrs.utils;
+package demo.jaxrs.utils.provider;
+
+import demo.jaxrs.utils.annotation.Pretty;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;

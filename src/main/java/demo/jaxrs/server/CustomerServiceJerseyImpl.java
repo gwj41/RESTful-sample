@@ -1,21 +1,3 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
 package demo.jaxrs.server;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -24,7 +6,8 @@ import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.fasterxml.jackson.module.jsonSchema.factories.SchemaFactoryWrapper;
 import demo.jaxrs.utils.JSONTool;
 
-import javax.ws.rs.NotFoundException;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.WebApplicationException;
@@ -32,29 +15,45 @@ import javax.ws.rs.core.*;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import java.io.*;
+import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-
-public class CustomerServiceImpl implements CustomerService {
+public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
     long currentId = 123;
-    Map<Long, Customer> customers = new ConcurrentHashMap<>();
-    Map<Long, Order> orders = new ConcurrentHashMap<Long, Order>();
+    private Map<Long, Customer> customers = new ConcurrentHashMap<>();
+    private Map<Long, Order> orders = new ConcurrentHashMap<Long, Order>();
+    @Context
+    private UriInfo uriInfo;
+    @Context
+    private Request request;
+    @Context
+    private HttpServletRequest httpServletRequest;
+    @Context
+    private HttpHeaders httpHeaders;
+    @HeaderParam(HttpHeaders.USER_AGENT)
+    private String userAgent;
+    private CustomerDelegate customerDelegate;
 
-    public CustomerServiceImpl() {
+    public CustomerServiceJerseyImpl() {
         init();
+        customerDelegate = new CustomerDelegate();
     }
 
+    public CustomerDelegate getCustomer() {
+        return customerDelegate;
+    }
     /**
      * No2
      */
     public Customer addCustomerByStream(InputStream inputStream) throws IOException {
         byte[] input = readFromStream(inputStream);
         String inputStrng = new String(input);
-        return JSONTool.toObject(inputStrng,Customer.class);
+        return JSONTool.toObject(inputStrng, Customer.class);
     }
 
     private byte[] readFromStream(InputStream inputStream) throws IOException {
@@ -62,7 +61,7 @@ public class CustomerServiceImpl implements CustomerService {
         byte[] buffer = new byte[1000];
         int wasRead;
         while ((wasRead = inputStream.read(buffer)) > -1) {
-            baos.write(buffer,0,wasRead);
+            baos.write(buffer, 0, wasRead);
         }
         return baos.toByteArray();
     }
@@ -108,7 +107,7 @@ public class CustomerServiceImpl implements CustomerService {
         cache.setMaxAge(1000);
         cache.setSMaxAge(2000);
         Locale locale = Locale.CHINA;
-        Response.ResponseBuilder responseBuilder = request.evaluatePreconditions(new Date(),tag);
+        Response.ResponseBuilder responseBuilder = request.evaluatePreconditions(new Date(), tag);
         if (responseBuilder != null) {
             responseBuilder.cacheControl(cache);
             return responseBuilder.build();
@@ -145,13 +144,17 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No7
      */
-    public Customer getCustomer1(PathSegment id) {
+    public Customer getCustomer1(PathSegment id) throws SQLException {
         System.out.println("----invoking getCustomer, Customer gender is: " + id.getMatrixParameters().getFirst("gender"));
         System.out.println("----PathSegment invoking getCustomer, Customer id is: " + id.getPath());
-        UriBuilder uriBuilder = UriBuilder.fromMethod(CustomerService.class,"getCustomer");
+        UriBuilder uriBuilder = UriBuilder.fromMethod(CustomerServiceJersey.class, "getCustomer1");
         Link link = Link.fromUriBuilder(uriBuilder).rel("edit").type(MediaType.TEXT_PLAIN).build(id);
         long idNumber = Long.parseLong(id.getPath());
         Customer c = customers.get(idNumber);
+        if (c == null) {
+            throw new SQLException();
+        }
+        c.getLinks().clear();
         c.getLinks().add(link);
         Customer c1;
         JAXBContext ctx;
@@ -160,7 +163,7 @@ public class CustomerServiceImpl implements CustomerService {
             StringWriter writer = new StringWriter();
             ctx.createMarshaller().marshal(c, writer);
             String custString = writer.toString();
-            c1 = (Customer)ctx.createUnmarshaller()
+            c1 = (Customer) ctx.createUnmarshaller()
                     .unmarshal(new StringReader(custString));
         } catch (JAXBException e) {
             e.printStackTrace();
@@ -171,7 +174,7 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No8
      */
-    public Response getCustomer2( String id) {
+    public Response getCustomer2(String id) {
         System.out.println("----invoking getCustomer, Customer id is: " + id);
         long idNumber = Long.parseLong(id);
         Customer c = customers.get(idNumber);
@@ -210,11 +213,13 @@ public class CustomerServiceImpl implements CustomerService {
      */
     public Response getCustomer3(String firstName, String lastName) {
         System.out.println("----invoking getCustomer, Customer name is: " + firstName + " " + lastName);
+        Annotation annotation = CustomerServiceJersey.class
+                .getAnnotation(Path.class);
         Set<Long> customerKey = customers.keySet();
         for (Long key : customerKey) {
             Customer c = customers.get(key);
             if (c.getFirstName().equals(firstName) && c.getLastName().equals(lastName)) {
-                return Response.ok(c).build();
+                return Response.ok().entity(c, new Annotation[]{annotation}).cookie(new NewCookie("ABC", "CNN")).header("txid", 998997).type(MediaType.APPLICATION_XML).build();
             }
         }
         return Response.status(Response.Status.NO_CONTENT).build();
@@ -223,12 +228,12 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No10
      */
-    public Response getCustomer4(List<String> firstName,String lastName) {
+    public Response getCustomer4(List<String> firstName, String lastName) {
         System.out.println("----invoking QueryParam getCustomer, Customer name is: " + firstName + " " + lastName);
         /*for (String nameStr : name) {
             System.out.println("Name is " + nameStr);
         }*/
-        return Response.status(Response.Status.OK).build();
+        return Response.ok(firstName).build();
     }
 
     /**
@@ -256,15 +261,17 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No14
      */
-    public Response updateCustomer(long id,Customer customer) {
+    public Response updateCustomer(long id, Customer customer) {
         System.out.println("----invoking updateCustomer, Customer name is: " + customer.getFirstName() + " " + customer.getLastName());
         Customer c = customers.get(id);
-        Link link = Link.fromResource(Customer.class).link("{id}").rel("edit").type(MediaType.TEXT_PLAIN).build(id);
+        Link link = Link.fromMethod(CustomerServiceJersey.class, "getCustomer1").rel("edit").type(MediaType.TEXT_PLAIN).build(id);
         Response r;
         if (c != null) {
             c.setLastName(customer.getLastName());
+            c.getLinks().add(link);
+            System.out.println("User Agent is " + userAgent);
 //            customers.put(customer.getId(), customer);
-            r = Response.ok().links(link).build();
+            r = Response.ok(c).location(UriBuilder.fromUri(uriInfo.getBaseUriBuilder().build()).build()).links(link).build();
         } else {
             r = Response.notModified().build();
         }
@@ -290,12 +297,12 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No16
      */
-    public Response addCustomer1(String firstName, String lastName,URL referer,HttpHeaders headers) {
+    public Response addCustomer1(String firstName, String lastName, URL referer, HttpHeaders headers) {
         System.out.println("Start @FormParam,@HeaderParam test...");
-        for (Map.Entry headerEntry:headers.getRequestHeaders().entrySet()) {
+        for (Map.Entry headerEntry : headers.getRequestHeaders().entrySet()) {
             System.out.println("Header " + headerEntry.getKey() + ":" + headerEntry.getValue());
         }
-        for (Map.Entry<String,Cookie> cookieEntry:headers.getCookies().entrySet()) {
+        for (Map.Entry<String, Cookie> cookieEntry : headers.getCookies().entrySet()) {
             Cookie cookie = cookieEntry.getValue();
             System.out.println("Name: " + cookie.getName() + ",Value:" + cookie.getValue() + ",Path:" + cookie.getPath());
         }
@@ -314,8 +321,8 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No17
      */
-    public MultivaluedMap<String, String> addCustomerWithMultiValuedMap(MultivaluedMap<String, String> form) {
-        return form;
+    public Response addCustomerWithMultiValuedMap(MultivaluedMap<String, String> form) {
+        return Response.ok(form).build();
     }
 
     /**
@@ -362,7 +369,7 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No21
      */
-    public File getPictureWithPathSegmentList(String make,List<PathSegment> model, int year) {
+    public File getPictureWithPathSegmentList(String make, List<PathSegment> model, int year) {
         System.out.println("----invoking getPictureWithPathSegmentList, Make is: " + make);
         for (Iterator<PathSegment> carIterator = model.iterator(); carIterator.hasNext(); ) {
             PathSegment car = carIterator.next();
@@ -371,8 +378,7 @@ public class CustomerServiceImpl implements CustomerService {
             System.out.println("----Color is: " + map.get("color"));
             System.out.println("----Weight is: " + map.get("weight"));
         }
-        String filePath = "images" + File.pathSeparator + "a.jpg";
-        Thread.currentThread().getContextClassLoader().getResource(filePath);
+        String filePath = Thread.currentThread().getContextClassLoader().getResource("images/a.jpg").getFile();
         File file = new File(filePath);
         return file;
     }
@@ -380,14 +386,14 @@ public class CustomerServiceImpl implements CustomerService {
     /**
      * No22
      */
-    public Car getPictureWithPathSegment(String make,PathSegment model, int year,UriInfo uriInfo) {
+    public Car getPictureWithPathSegment(String make, PathSegment model, int year, UriInfo uriInfo) {
         System.out.println("----invoking getPictureWithPathSegmentList, Make is: " + make);
         System.out.println("----Model is: " + model.getPath());
         MultivaluedMap<String, String> map = model.getMatrixParameters();
         System.out.println("----Color is: " + map.getFirst("color"));
         System.out.println("----Weight is: " + map.getFirst("weight"));
         System.out.println("----Year is: " + year);
-        Car car = new Car(1,make,model.getPath(),map.getFirst("color"),map.getFirst("weight"),year);
+        Car car = new Car(1, make, model.getPath(), map.getFirst("color"), map.getFirst("weight"), year);
         String make1 = uriInfo.getPathParameters().getFirst("make");
         PathSegment model1 = uriInfo.getPathSegments().get(3);
         URI relativizeUri;
@@ -425,44 +431,19 @@ public class CustomerServiceImpl implements CustomerService {
         List<Customer> list = new ArrayList<>();
         list.add(customers.get(123));
         list.add(customers.get(111));
-        GenericEntity<List<Customer>> entity = new GenericEntity(list,List.class);
+        GenericEntity<List<Customer>> entity = new GenericEntity(list, List.class);
 //        GenericEntity<List<Customer>> entity = new GenericEntity<List<Customer>>(list){};
         return Response.ok(entity).build();
     }
 
     final void init() {
-        Customer c = new Customer();
-        c.setFirstName("John");
-        c.setLastName("Smith");
-        c.setId(123);
-        c.setWeight("90");
-        c.setBirthday(new Date());
-        Address address = new Address();
-        address.setCity("Suzhou");
-        address.setState("Jiangsu");
-        address.setStreet("Xinghu");
-        address.setZip("215123");
-        c.setAddress(address);
-        customers.put(c.getId(), c);
-
-        Customer c1 = new Customer();
-        c1.setFirstName("Wenjun");
-        c1.setLastName("Gu");
-        c1.setId(111);
-        c1.setWeight("65");
-        c.setBirthday(new Date());
-        Address address1 = new Address();
-        address1.setCity("Shanghai");
-        address1.setState("Pudong");
-        address1.setStreet("Nanjing Road");
-        address1.setZip("123987");
-        c1.setAddress(address1);
-        customers.put(c1.getId(), c1);
+        customers = CustomerFactory.instance.getCustomers();
 
         Order o = new Order();
         o.setDescription("order 223");
         o.setId(223);
         orders.put(o.getId(), o);
     }
+
 
 }

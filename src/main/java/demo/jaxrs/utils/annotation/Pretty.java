@@ -1,4 +1,4 @@
-package demo.jaxrs.utils;
+package demo.jaxrs.utils.annotation;
 
 import org.springframework.stereotype.Component;
 

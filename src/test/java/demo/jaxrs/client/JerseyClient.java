@@ -6,11 +6,7 @@ import demo.jaxrs.server.Address;
 import demo.jaxrs.server.Customer;
 import demo.jaxrs.utils.GZIPDecoder;
 import demo.jaxrs.utils.GZIPEncoder;
-/*import org.apache.cxf.helpers.IOUtils;
-import org.apache.cxf.io.CachedOutputStream;
-import org.apache.cxf.jaxrs.client.WebClient;
-import org.apache.cxf.transport.common.gzip.GZIPInInterceptor;
-import org.apache.cxf.transport.common.gzip.GZIPOutInterceptor;*/
+import org.glassfish.jersey.internal.util.collection.MultivaluedStringMap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,38 +14,37 @@ import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 
 import javax.ws.rs.Priorities;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.*;
 import javax.ws.rs.core.*;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.util.*;
 
 @RunWith(BlockJUnit4ClassRunner.class)
-public class CXFClient {
-    private static final String BASE_LOCATION = "http://localhost:8080/RESTful-sample/service/info/";
-//    private WebClient client1;
-    private javax.ws.rs.client.Client client2;
-    private javax.ws.rs.client.Client client3;
+public class JerseyClient {
+    private static final String BASE_LOCATION = "http://localhost:8080/RESTful-sample/service";
+    private Client client2;
+    private Client client3;
     private Response response;
-    /*@Before
+    private WebTarget target;
+    @Before
     public void init() {
         List<Class> providers = new ArrayList();
 //        providers.add(GZIPDecoder.class);
 //        providers.add(GZIPEncoder.class);
-        providers.add(GZIPOutInterceptor.class);
-        providers.add(GZIPInInterceptor.class);
-        client1 = WebClient.create(BASE_LOCATION,providers);
 //        client2 = ClientBuilder.newBuilder().build();
 //        client2 = ClientBuilder.newBuilder().register(GZIPInInterceptor.class).build();
-        client2 = ClientBuilder.newBuilder().register(GZIPDecoder.class, Priorities.ENTITY_CODER).register(GZIPEncoder.class, Priorities.ENTITY_CODER).build();
+        client2 = ClientBuilder.newBuilder().register(JacksonJsonProvider.class).build();
+        target = client2.target(BASE_LOCATION);
         client3 = ClientBuilder.newBuilder().property("connection.timeout",100).register(JacksonJaxbJsonProvider.class).build();
     }
+
     @Test
     public void cxf1() {
-        System.out.println("Sent WebClient test...");
-        client1 = client1.path("customerservice/customers/{id};gender=male","123").accept(MediaType.APPLICATION_XML);
-        System.out.println(client1.get(String.class));
+        System.out.println("Get sub resource");
+        System.out.println(target.path("customerservice/{id}/delegate/firstName").resolveTemplate("id",123).request().accept(new String[]{MediaType.TEXT_PLAIN}).get(String.class));
     }
 
     @Test
@@ -57,7 +52,7 @@ public class CXFClient {
         System.out.println("Add customer test...");
         String inputFile = Thread.currentThread().getContextClassLoader().getResource("customer.txt").getFile();
         File input = new File(inputFile);
-        response = client1.path("customerservice/customer/stream").accept(MediaType.APPLICATION_JSON).post(input);
+        response = target.path("customerservice/customer/stream").request().accept(MediaType.APPLICATION_JSON).post(Entity.entity(input,MediaType.APPLICATION_JSON));
         response.bufferEntity();
         System.out.println("Status: " + response.getStatus());
         System.out.println("Location: " + response.getLocation());
@@ -68,85 +63,96 @@ public class CXFClient {
     @Test
     public void cxf3() {
         System.out.println("Sent WebClient test...get StreamingOutput result");
-        System.out.println(client1.path("customerservice/customers/streamingOutput/{id}", "123").accept(new String[]{MediaType.TEXT_PLAIN}).get(String.class));
+        System.out.println(target.path("customerservice/customers/streamingOutput/{id}").resolveTemplate("id",123).request().accept(new String[]{MediaType.TEXT_PLAIN}).get(String.class));
     }
 
-    *//**
+    /**
      * Multiple PathSegments and CacheControl test
-     *//*
+     */
     @Test
     public void cxf4() {
         System.out.println("Invoking getCustomer With Multiple PathSegments");
-        WebClient client = client1.path("customerservice/customers/{id};gender=male;nickName=Robbie/{firstName};address=suzhou/Age",new String[]{"123","Wenjun"}).accept(MediaType.APPLICATION_JSON);
-
-        response = client.get();
+        WebTarget webTarget = target.path("customerservice/customers/{id};gender=male;nickName=Robbie/{firstName};address=suzhou/Age");
+        Map param = new HashMap();
+        param.put("id","123");
+        param.put("firstName","Wenjun");
+//        webTarget.resolveTemplates(param);
+        Invocation.Builder builder = webTarget.resolveTemplates(param).request().accept(MediaType.APPLICATION_JSON);
+        response = builder.get();
         response.bufferEntity();
         System.out.println(response.readEntity(String.class));
         // Cached customer
 //        WebClient client4 = client1.path("customerservice/customers/{id};gender=male;nickName=Robbie/{firstName};address=suzhou/Age",new String[]{"123","Wenjun"}).accept(MediaType.APPLICATION_JSON);
-        client.header(HttpHeaders.ETAG,response.getHeaderString(HttpHeaders.ETAG)).header(HttpHeaders.IF_UNMODIFIED_SINCE,response.getHeaderString(HttpHeaders.LAST_MODIFIED));
-        response = client.get();
+        builder.header(HttpHeaders.ETAG,response.getHeaderString(HttpHeaders.ETAG)).header(HttpHeaders.IF_UNMODIFIED_SINCE,response.getHeaderString(HttpHeaders.LAST_MODIFIED));
+        response = builder.get();
         System.out.println(response.readEntity(String.class));
     }
 
     @Test
     public void cxf5() {
         System.out.println("Invoking getCustomer With UriInfo");
-        System.out.println(client1.path("customerservice/customers/{id};gender=male;nickName=Robbie/{firstName};address=suzhou/UriInfo", new String[]{"123", "Wenjun"}).get(String.class));
+        System.out.println(target.path("customerservice/customers/{id};gender=male;nickName=Robbie/{firstName};address=suzhou/UriInfo").resolveTemplate("id",123).resolveTemplate("firstName","Wenjun").request().get(String.class));
     }
 
     @Test
     public void cxf6() {
         System.out.println("Return File object...");
-        File file = client1.path("customerservice/file/{filePath}", "customerFile.txt").accept(MediaType.TEXT_PLAIN).get(File.class);
+        File file = target.path("customerservice/file/{filePath}").resolveTemplate("filePath","customerFile.txt").request().accept(MediaType.TEXT_PLAIN).get(File.class);
         System.out.println("File is: " + file.getPath());
     }
 
     @Test
     public void cxf7() {
         System.out.println("Sent WebClient test...get json and xml format");
-        System.out.println(client1.path("customerservice/customers/{id}", "123").header(HttpHeaders.WWW_AUTHENTICATE,"abcde").accept(new String[]{MediaType.APPLICATION_JSON}).get(String.class));
+        System.out.println(target.path("customerservice/customers/{id};gender=male").resolveTemplate("id",123).request().header(HttpHeaders.WWW_AUTHENTICATE,"abcde").accept(new String[]{MediaType.APPLICATION_XML}).get(String.class));
     }
 
     @Test
     public void cxf8() {
         System.out.println("Sent json2 WebClient test...");
-        System.out.println(client1.path("customerservice/customers/json2/{id}", "1234").accept(MediaType.APPLICATION_JSON).get(String.class));
+        response = target.path("customerservice/customers/json2/{id}").resolveTemplate("id",123).request().accept(MediaType.APPLICATION_JSON).get();
+        System.out.println(response.readEntity(String.class));
     }
 
     @Test
     public void cxf9() {
         System.out.println("Sent json2 WebClient test,get Wenjun Gu...");
         String[] name = {"Wenjun","Gu"};
-        System.out.println(client1.path("customerservice/customers/json2/{firstName}-{lastName}", name).accept(MediaType.APPLICATION_JSON).get(String.class));
+        Map param = new HashMap();
+        param.put("firstName","Wenjun");
+        param.put("lastName","Gu");
+        System.out.println(target.path("customerservice/customers/json2/{firstName}-{lastName}").resolveTemplates(param).request().accept(MediaType.APPLICATION_JSON).buildGet().invoke(String.class));
     }
 
     @Test
     public void cxf10() {
+/*        Scanner scanner = new Scanner(System.in);
+        String inputValue = scanner.next();
+        String[] name = {inputValue,"Gu"};*/
         String[] name = {"Wenjun","Gu"};
         System.out.println("Test @QueryParam List...");
-//        System.out.println(client7.path("customerservice/queryParam").query("first", "Gu").replaceQueryParam("first",name).get(String.class));
-        System.out.println(client1.path("customerservice/queryParam").replaceQueryParam("first", name).get(Response.class));
+        response = target.path("customerservice/queryParam").queryParam("first",name).request().get();
+        System.out.println(response.readEntity(List.class));
     }
 
     @Test
     public void cxf11() {
         System.out.println("Return complex type List");
-        String customers = client1.path("customerservice/allCustomers/list/").accept(MediaType.APPLICATION_JSON).get(String.class);
+        String customers = target.path("customerservice/allCustomers/list/").request().accept(MediaType.APPLICATION_JSON).get(String.class);
         System.out.println(customers);
     }
 
     @Test
     public void cxf12() {
         System.out.println("Return complex type Map");
-        String customers = client1.path("customerservice/allCustomers/map/").accept(MediaType.APPLICATION_JSON).get(String.class);
+        String customers = target.path("customerservice/allCustomers/map/").request().accept(MediaType.APPLICATION_JSON).get(String.class);
         System.out.println(customers);
     }
 
     @Test
     public void cxf13() {
         System.out.println("Return complex type Map in Response");
-        response = client1.path("customerservice/allCustomers/map/response/").accept(MediaType.APPLICATION_JSON).get();
+        response = target.path("customerservice/allCustomers/map/response/").request().accept(MediaType.APPLICATION_JSON).get();
         response.bufferEntity();
         String resultMap = response.readEntity(String.class);
         System.out.println(resultMap);
@@ -156,11 +162,10 @@ public class CXFClient {
     public void cxf14() {
         String inputFile = Thread.currentThread().getContextClassLoader().getResource("customer2.txt").getFile();
         File input = new File(inputFile);
-        client1.type("application/json;charset=UTF-8");
-        response = client1.path("customerservice/customers/{id}","123").accept(MediaType.APPLICATION_JSON).put(input);
+//        client2.type("application/json;charset=UTF-8");
+        response = target.path("customerservice/customers/{id}").resolveTemplate("id",123).request().accept(MediaType.APPLICATION_JSON).put(Entity.entity(input,MediaType.APPLICATION_JSON));
         response.bufferEntity();
-        System.out.println("Status: " + response.getStatus());
-        System.out.println("Location: " + response.getLocation());
+        System.out.println("Updated customer: " + response.readEntity(String.class));
     }
 
     @Test
@@ -169,8 +174,8 @@ public class CXFClient {
 //        Thread.currentThread().getClass().getClassLoader().getResourceAsStream("/customer.txt");
         String inputFile = Thread.currentThread().getContextClassLoader().getResource("customer.txt").getFile();
         File input = new File(inputFile);
-        client1.type("application/json;charset=UTF-8");
-        response = client1.path("customerservice/customers").accept(MediaType.APPLICATION_JSON).post(input);
+//        client2.type("application/json;charset=UTF-8");
+        response = target.path("customerservice/customers").request().accept(MediaType.APPLICATION_JSON).post(Entity.entity(input,MediaType.APPLICATION_JSON));
         response.bufferEntity();
         System.out.println("Status: " + response.getStatus());
         System.out.println("Family: " + response.getStatusInfo().getFamily());
@@ -183,8 +188,8 @@ public class CXFClient {
         System.out.println("Add customer1 test...");
         String inputFile1 = Thread.currentThread().getContextClassLoader().getResource("customer1.txt").getFile();
         File input1 = new File(inputFile1);
-        client1.type("application/xml;charset=UTF-8");
-        response = client1.path("customerservice/customers").accept(MediaType.APPLICATION_JSON).post(input1);
+//        client1.type("application/xml;charset=UTF-8");
+        response = target.path("customerservice/customers").request().accept(MediaType.APPLICATION_JSON).post(Entity.entity(input1,MediaType.APPLICATION_XML));
         System.out.println("Location is " + response.getLocation());
         System.out.println("Response Status is " + response.getStatus());
     }
@@ -192,30 +197,30 @@ public class CXFClient {
     @Test
     public void cxfJAXRSClient1() {
         System.out.println("*** GET Created Customer **");
-        String customer = client2.target(BASE_LOCATION + "customerservice/customers/{id}").resolveTemplate("id",123).request().accept(MediaType.APPLICATION_JSON).get(String.class);
+        String customer = target.path("customerservice/customers/{id}").resolveTemplate("id",123).request().accept(MediaType.APPLICATION_JSON).get(String.class);
         System.out.println(customer);
     }
 
-    *//**
+    /**
      * No16
-     *//*
+     */
     @Test
     public void cxfJAXRSClient2() {
         System.out.println("*** GET Created Customer,post Form **");
         Form form = new Form();
         form.param("firstName","Jianbing");
         form.param("lastName","Gao");
-        response = client2.target(BASE_LOCATION + "customerservice/customers/form").request().accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
+        response = target.path("customerservice/customers/form").request().accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
         System.out.println(response.readEntity(String.class));
     }
 
     @Test
     public void cxf17() {
         System.out.println("Post customer with MultivaluedMap...");
-        MultivaluedMap map = new MultivaluedHashMap();
+        MultivaluedMap<String,String> map = new MultivaluedStringMap();
         map.add("firstName","Jianbing");
         map.add("lastName","Gao");
-        response = client1.path("customerservice/multiValuedMap").accept(MediaType.APPLICATION_FORM_URLENCODED).post(Entity.form(map));
+        response = target.path("customerservice/multiValuedMap").request().accept(MediaType.APPLICATION_FORM_URLENCODED).post(Entity.form(map));
 //        response = client2.target(BASE_LOCATION + "customerservice/customers/bean").request().accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
 //        System.out.println(client1.getCurrentURI().getPath());
         System.out.println("Result of response.readEntity: " + response.readEntity(MultivaluedMap.class));
@@ -227,7 +232,7 @@ public class CXFClient {
         Form form = new Form();
         form.param("firstName","Jianbing");
         form.param("lastName","Gao");
-        response = client1.path("customerservice/customers/bean").accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
+        response = target.path("customerservice/customers/bean").request().accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
 //        response = client2.target(BASE_LOCATION + "customerservice/customers/bean").request().accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
 //        System.out.println(client1.getCurrentURI().getPath());
         System.out.println("Location is " + response.getLocation());
@@ -236,31 +241,45 @@ public class CXFClient {
 
     @Test
     public void cxf21() {
-        String[] param = {"chevrolet","trax","cruze","2017"};
-        File file = client1.path("customerservice/cars/{make}/{car1}/{car2}/year/{year}",param).accept(MediaType.TEXT_PLAIN).get(File.class);
-        System.out.println("File name is:" + file.getName() + ", File size is:" + file.length());
+//        String[] param = {"chevrolet","trax","cruze","2017"};
+        Map param = new HashMap();
+        param.put("make","chevrolet");
+        param.put("car1","trax");
+        param.put("car2","cruze");
+        param.put("year","2017");
+        File file = target.path("customerservice/cars/{make}/{car1}/{car2}/year/{year}").resolveTemplates(param).request().accept(MediaType.TEXT_PLAIN).get(File.class);
+        System.out.println("File name is:" + file.getName() + ", File size is:" + file.length() + ",File path is:" + file.getAbsolutePath());
     }
 
     @Test
     public void cxf22() {
-        String[] param = new String[]{"chevrolet","trax","white","1410","2017"};
-        String car = client1.path("customerservice/cars/{make}/{car1};color={color};weight={weight}/year/{year}",param).accept(MediaType.APPLICATION_JSON).get(String.class);
+//        String[] param = new String[]{"chevrolet","trax","white","1410","2017"};
+        Map param = new HashMap();
+        param.put("make","chevrolet");
+        param.put("car1","trax");
+        param.put("color","white");
+        param.put("weight","1410");
+        param.put("year","2017");
+        String car = target.path("customerservice/cars/{make}/{car1};color={color};weight={weight}/year/{year}").resolveTemplates(param).request().accept(MediaType.APPLICATION_JSON).get(String.class);
         System.out.println(car);
     }
 
     @Test
     public void cxf23() {
-        String[] param = {"trax","cruze"};
-        String car = client1.path("customerservice/cars/{car1}/{car2}",param).accept(MediaType.APPLICATION_JSON).get(String.class);
+//        String[] param = {"trax","cruze"};
+        Map param = new HashMap();
+        param.put("car1","trax");
+        param.put("car2","cruze");
+        String car = target.path("customerservice/cars/{car1}/{car2}").resolveTemplates(param).request().accept(MediaType.APPLICATION_JSON).get(String.class);
         System.out.println(car);
     }
 
-    *//**
+    /**
      * GenericEntity doesn't work
-     *//*
+     */
     @Test
     public void cxf24() {
-        response = client1.path("customerservice/customers/generic").accept(MediaType.APPLICATION_JSON).get();
+        response = target.path("customerservice/customers/generic").request().accept(MediaType.APPLICATION_JSON).get();
 //        GenericEntity<List<Customer>> entity = response.getEntity();
         response.readEntity(String.class);
         System.out.println(response.readEntity(String.class));
@@ -272,7 +291,7 @@ public class CXFClient {
         Customer c = new Customer();
         c.setFirstName("John");
         c.setLastName("Smith");
-        c.setId(123);
+        c.setId(222);
         c.setWeight("90");
         c.setBirthday(new Date());
         Address address = new Address();
@@ -281,22 +300,25 @@ public class CXFClient {
         address.setStreet("Xinghu");
         address.setZip("215123");
         c.setAddress(address);
-        response = client3.target(BASE_LOCATION + "customerservice/customers").request().post(Entity.json(c));
+        response = target.path("customerservice/customers").request().post(Entity.json(c));
         System.out.println(response.readEntity(String.class));
     }
 
     private static String getStringFromInputStream(InputStream in) throws Exception {
-        CachedOutputStream bos = new CachedOutputStream();
-        IOUtils.copy(in, bos);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[in.available()];
+        while (in.read(buffer) != -1) {
+            bos.write(buffer);
+        }
+        bos.flush();
         in.close();
         bos.close();
-        return bos.getOut().toString();
+        return bos.toString();
     }
 
     @After
     public void destroy() {
-        System.out.println(client1.getCurrentURI().getPath());
-        client1.close();
+//        System.out.println(response.getLocation().getPath());
         client2.close();
         if (response != null) {
             System.out.println("======================Response Status is " + response.getStatusInfo().getStatusCode());
@@ -305,8 +327,8 @@ public class CXFClient {
                 Map.Entry<String,Object> next = (Map.Entry<String, Object>) responseIterator.next();
                 System.out.println("Header: " + next.getKey() + ",Value:" + next.getValue());
             }
-            response.close();
+//            response.close();
         }
 
-    }*/
+    }
 }

@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-    Copyright (C) 2011 Talend Inc. - www.talend.com
--->
-<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<!--<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:jaxrs="http://cxf.apache.org/jaxrs"
        xmlns:cxf="http://cxf.apache.org/core"
        xmlns:context="http://www.springframework.org/schema/context"
@@ -15,25 +12,30 @@
          http://cxf.apache.org/jaxrs
          http://cxf.apache.org/schemas/jaxrs.xsd
          http://cxf.apache.org/core
-         http://cxf.apache.org/schemas/core.xsd">
-
+         http://cxf.apache.org/schemas/core.xsd">-->
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="
+         http://www.springframework.org/schema/beans
+         http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://www.springframework.org/schema/context
+         http://www.springframework.org/schema/context/spring-context.xsd">
     <!--<import resource="classpath*:jaxrs-config/non-singleton-config.xml"/>-->
-    <import resource="classpath*:jaxrs-config/singleton-config.xml"/>
+    <!--<import resource="classpath*:jaxrs-config/singleton-config.xml"/>-->
     <!--<bean class="demo.jaxrs.utils.Pretty" abstract="true"/>-->
-    <context:component-scan base-package="demo.jaxrs.utils"/>
+    <context:component-scan base-package="demo.jaxrs.utils.annotation"/>
     <!-- CXF Logging Feature -->
-    <bean id="loggingFeature" class="org.apache.cxf.feature.LoggingFeature"/>
-    <!--
-    <bean id="jacksonJsonProvider" class="org.codehaus.jackson.jaxrs.JacksonJsonProvider"/>
-    -->
-    <!--
-    <bean id="jacksonJaxbJsonProvider" class="org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider" />
-    -->
+    <!--<bean id="loggingFeature" class="org.apache.cxf.feature.LoggingFeature"/>-->
+
     <bean id="jacksonJsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider">
     </bean>
+    <bean id="customer" class="demo.jaxrs.server.Customer"/>
     <bean id="jacksonJaxbJsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider"/>
     <bean id="customerService" class="demo.jaxrs.server.CustomerServiceImpl"/>
     <bean id="customerHtmlFormWriter" class="demo.jaxrs.server.CustomerHtmlFormWriter"/>
     <bean id="entityNotFoundMapper" class="demo.jaxrs.server.EntityNotFoundMapper"/>
+    <bean id="maxAgeFeature" class="demo.jaxrs.utils.provider.MaxAgeFeature"/>
+    <bean class="demo.jaxrs.utils.provider.JAXBProvider"/>
 </beans>
 
