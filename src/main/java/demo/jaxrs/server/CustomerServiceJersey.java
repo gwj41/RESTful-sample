@@ -4,6 +4,7 @@ import demo.jaxrs.utils.annotation.MaxAge;
 import demo.jaxrs.utils.annotation.Pretty;
 import demo.jaxrs.utils.annotation.TokenAuthenticated;
 
+import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.io.File;
@@ -58,7 +59,8 @@ public interface CustomerServiceJersey {
     @GET
     @Path("customers/json2/{id}")
     @Produces({MediaType.APPLICATION_XML,MediaType.APPLICATION_JSON})
-    Response getCustomer2(@PathParam("id") String id);
+    @RolesAllowed(value = {"admin"})
+    Response getCustomer2(@PathParam("id") String id,@Context SecurityContext securityContext);
 
     @GET
     @Path("customers/json2/{firstName}-{lastName}")

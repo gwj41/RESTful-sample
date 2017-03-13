@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.fasterxml.jackson.module.jsonSchema.factories.SchemaFactoryWrapper;
 import demo.jaxrs.utils.JSONTool;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HeaderParam;
@@ -24,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
+    private Log logger = LogFactory.getLog(CustomerServiceJerseyImpl.class);
     long currentId = 123;
     private Map<Long, Customer> customers = new ConcurrentHashMap<>();
     private Map<Long, Order> orders = new ConcurrentHashMap<Long, Order>();
@@ -174,8 +177,9 @@ public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
     /**
      * No8
      */
-    public Response getCustomer2(String id) {
+    public Response getCustomer2(String id, SecurityContext securityContext) {
         System.out.println("----invoking getCustomer, Customer id is: " + id);
+        logme(securityContext);
         long idNumber = Long.parseLong(id);
         Customer c = customers.get(idNumber);
         ObjectMapper m = new ObjectMapper();
@@ -288,7 +292,7 @@ public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
         customers.put(customer.getId(), customer);
         URI customerId = UriBuilder.fromResource(Customer.class).path("{id}").build(customer.getId());
 //        URI customerId = UriBuilder.path("/customers/").path("{id}").build(customer.getId());
-        return Response.created(customerId).entity(customer).status(Response.Status.FORBIDDEN).build();
+        return Response.created(customerId).entity(customer).status(Response.Status.OK).build();
 /*        return Response.created(URI.create("/customers/"
                 + customer.getId())).entity(customer).build();*/
 //        return Response.ok(customer).build();
@@ -445,5 +449,10 @@ public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
         orders.put(o.getId(), o);
     }
 
+    private void logme(final SecurityContext securityContext) {
+        logger.info("User= " + securityContext.getUserPrincipal().getName());
+        logger.info("User Role?= " + securityContext.isUserInRole("user"));
+        logger.info("Auth way= " + securityContext.getAuthenticationScheme());
+    }
 
 }

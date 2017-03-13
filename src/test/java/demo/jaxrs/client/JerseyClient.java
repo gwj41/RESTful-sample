@@ -6,6 +6,8 @@ import demo.jaxrs.server.Address;
 import demo.jaxrs.server.Customer;
 import demo.jaxrs.utils.GZIPDecoder;
 import demo.jaxrs.utils.GZIPEncoder;
+import org.glassfish.jersey.SslConfigurator;
+import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.internal.util.collection.MultivaluedStringMap;
 import org.junit.After;
 import org.junit.Before;
@@ -13,6 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 
+import javax.net.ssl.SSLContext;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.*;
@@ -36,7 +39,7 @@ public class JerseyClient {
 //        providers.add(GZIPEncoder.class);
 //        client2 = ClientBuilder.newBuilder().build();
 //        client2 = ClientBuilder.newBuilder().register(GZIPInInterceptor.class).build();
-        client2 = ClientBuilder.newBuilder().register(JacksonJsonProvider.class).build();
+        client2 = ClientBuilder.newBuilder().sslContext(buildSslContext(true)).register(JacksonJsonProvider.class).build();
         target = client2.target(BASE_LOCATION);
         client3 = ClientBuilder.newBuilder().property("connection.timeout",100).register(JacksonJaxbJsonProvider.class).build();
     }
@@ -329,6 +332,17 @@ public class JerseyClient {
             }
 //            response.close();
         }
+    }
 
+    private SSLContext buildSslContext(boolean admin) {
+        String keystore;
+        if (admin) {
+            keystore = "F:\\development\\certificate\\client\\restAdminClient.keystore";
+        } else {
+            keystore = "F:\\development\\certificate\\client\\restUserClient.keystore";
+        }
+        final SslConfigurator sslConfigurator = SslConfigurator.newInstance().trustStoreFile(keystore).trustStorePassword("restful").keyStoreFile(keystore).keyPassword("restful");
+        final SSLContext sslContext = sslConfigurator.createSSLContext();
+        return sslContext;
     }
 }
