@@ -5,9 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.fasterxml.jackson.module.jsonSchema.factories.SchemaFactoryWrapper;
 import demo.jaxrs.utils.JSONTool;
+import demo.jaxrs.utils.KeyUtil;
+import io.jsonwebtoken.CompressionCodecs;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.impl.crypto.MacProvider;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
@@ -21,6 +28,7 @@ import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.Key;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +48,8 @@ public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
     private HttpHeaders httpHeaders;
     @HeaderParam(HttpHeaders.USER_AGENT)
     private String userAgent;
+    @Context
+    private ServletContext context;
     private CustomerDelegate customerDelegate;
 
     public CustomerServiceJerseyImpl() {
@@ -440,6 +450,81 @@ public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
         return Response.ok(entity).build();
     }
 
+    /**
+     * Request a token from server
+     * @param username
+     * @param password
+     * @return
+     */
+    public Response authenticateUser(String username,String password) {
+        // 设置这个token的生命时间
+        Date expiry = getExpiryDate(30 * 24 * 60);// 30天的有效日期
+        Customer customer;
+        // 验证账号密码是否正确
+        for (Iterator<Map.Entry<Long, Customer>> it = customers.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Long, Customer> entry = it.next();
+            if (entry.getValue().getFirstName().equalsIgnoreCase(username)) {
+                customer = entry.getValue();
+            }
+        }
+        //使用Token工具类得到token，生成的策略是利用用户的姓名，到期时间，和私钥
+        //我这里使用的时Key key =MacProvider.generateKey(SignatureAlgorithm.HS512);
+        //HS512签名算法，必须保存生成的这个key到硬盘上，不然下次会出错,因为是hash算法，所以会变
+        //这个私钥可以理解为一把锁孔，可以依据这个锁孔来生成钥匙也就是token，但要进入这个门必须要匹配这个锁孔
+        String jwtString = getJWTString(username, expiry, KeyUtil.getKey());
+        //这是token的实体化类，用来返回给用户
+        Token  token = new Token();
+
+        token.setAuthToken(jwtString);
+        token.setExpires(expiry);
+
+        return Response.ok(token).build();
+    }
+
+    private Date getExpiryDate(int minutes) {
+        // 根据当前日期，来得到到期日期
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(new Date());
+        calendar.add(Calendar.MINUTE, minutes);
+        return calendar.getTime();
+    }
+
+    public static String getJWTString(String tel,Date expires,Key key){
+        if (tel == null) {
+            throw new NullPointerException("null username is illegal");
+        }
+
+        if (expires == null) {
+            throw new NullPointerException("null expires is illegal");
+        }
+
+        if (key == null) {
+            throw new NullPointerException("null key is illegal");
+        }
+        //用签名算法HS256和私钥key生成token
+        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS512;
+        String jwtString = Jwts.builder()
+                .setIssuer("Jersey-Security-Basic")//设置发行人
+                .setSubject(tel)//设置抽象主题
+                .setAudience("user")//设置角色
+                .setExpiration(expires)//过期时间
+                .setIssuedAt(new Date())//设置现在时间
+                .setId("1")//版本1
+                .signWith(signatureAlgorithm,key)
+                .compressWith(CompressionCodecs.DEFLATE)
+                .compact();
+        return jwtString;
+    }
+
+    private boolean isValid(String token, Key key) {
+        try {
+            Jwts.parser().setSigningKey(key).parseClaimsJws(token);
+            return true;
+        } catch (SignatureException e) {
+            return false;
+        }
+    }
+
     final void init() {
         customers = CustomerFactory.instance.getCustomers();
 
@@ -454,5 +539,4 @@ public class CustomerServiceJerseyImpl implements CustomerServiceJersey {
         logger.info("User Role?= " + securityContext.isUserInRole("user"));
         logger.info("Auth way= " + securityContext.getAuthenticationScheme());
     }
-
 }

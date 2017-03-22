@@ -5,6 +5,7 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import demo.jaxrs.utils.exceptionMapper.MyExceptionMapper;
 import demo.jaxrs.utils.provider.BearerTokenFilter;
 import demo.jaxrs.utils.provider.JAXBProvider;
+import demo.jaxrs.utils.provider.JWTSecurityFilter;
 import demo.jaxrs.utils.provider.MaxAgeFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature;
@@ -26,6 +27,7 @@ public class AppConfig extends ResourceConfig {
 //        register(CustomerServiceJerseyImpl.class);
         register(JacksonJaxbJsonProvider.class);
         register(JAXBProvider.class);
+        register(JWTSecurityFilter.class);
         resources.add(CustomerServiceJerseyImpl.class);
 //        resources.add(CustomerServiceJersey.class);
         resources.add(JacksonJsonProvider.class);

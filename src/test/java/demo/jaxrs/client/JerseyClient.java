@@ -6,6 +6,9 @@ import demo.jaxrs.server.Address;
 import demo.jaxrs.server.Customer;
 import demo.jaxrs.utils.GZIPDecoder;
 import demo.jaxrs.utils.GZIPEncoder;
+import demo.jaxrs.utils.provider.JWTSecurityFilter;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.glassfish.jersey.SslConfigurator;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.internal.util.collection.MultivaluedStringMap;
@@ -28,10 +31,12 @@ import java.util.*;
 @RunWith(BlockJUnit4ClassRunner.class)
 public class JerseyClient {
     private static final String BASE_LOCATION = "http://localhost:8080/RESTful-sample/service";
+    private Log logger = LogFactory.getLog(JerseyClient.class);
     private Client client2;
     private Client client3;
     private Response response;
     private WebTarget target;
+    private static final String TOKEN = "eyJhbGciOiJIUzUxMiIsInppcCI6IkRFRiJ9.eNocyrEKgDAMRdF_yVyhVbHq6Ojq4FxrhjiINA1YxH83OJ773gPEDCPMmBhLtWCURLlUU2CKYIBl03XF85BTGWRXCmNS4H3B6Nqh9p1tfGOAQv6DdV3_hyOT3h28HwAAAP__.AR7K6M-0w21cXsxkgut18STBma11yzIe0r8BnTS6P0qNGXz_EJm-4BG7ugrKFYTKQUFekqE_XV8rwxqcRH78WA";
     @Before
     public void init() {
         List<Class> providers = new ArrayList();
@@ -307,6 +312,29 @@ public class JerseyClient {
         System.out.println(response.readEntity(String.class));
     }
 
+    /**
+     * Request a token form server
+     */
+    @Test
+    public void jwt() {
+        Form form = new Form();
+        form.param("username","Wenjun");
+        form.param("password","123456");
+        response = target.path("customerservice/token").request().accept(MediaType.APPLICATION_JSON).post(Entity.form(form));
+//        System.out.println(response.readEntity(String.class));
+        logger.info(response.readEntity(String.class));
+    }
+
+    /**
+     * Request with a token
+     */
+    @Test
+    public void requestWithToken() {
+        System.out.println("*** GET Created Customer **");
+        String customer = target.path("customerservice/customers/{id}").resolveTemplate("id",123).request().header(HttpHeaders.AUTHORIZATION,TOKEN).accept(MediaType.APPLICATION_JSON).get(String.class);
+        System.out.println(customer);
+    }
+
     private static String getStringFromInputStream(InputStream in) throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         byte[] buffer = new byte[in.available()];
@@ -337,11 +365,11 @@ public class JerseyClient {
     private SSLContext buildSslContext(boolean admin) {
         String keystore;
         if (admin) {
-            keystore = "F:\\development\\certificate\\client\\restAdminClient.keystore";
+            keystore = "E:\\development\\certificate\\client\\restAdminClient.p12";
         } else {
-            keystore = "F:\\development\\certificate\\client\\restUserClient.keystore";
+            keystore = "E:\\development\\certificate\\client\\restUserClient.p12";
         }
-        final SslConfigurator sslConfigurator = SslConfigurator.newInstance().trustStoreFile(keystore).trustStorePassword("restful").keyStoreFile(keystore).keyPassword("restful");
+        final SslConfigurator sslConfigurator = SslConfigurator.newInstance().trustStoreFile(keystore).trustStorePassword("restful").keyStoreFile(keystore).keyStorePassword("restful").keyPassword("restful");
         final SSLContext sslContext = sslConfigurator.createSSLContext();
         return sslContext;
     }

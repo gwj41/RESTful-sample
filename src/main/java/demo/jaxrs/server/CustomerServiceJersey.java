@@ -5,6 +5,7 @@ import demo.jaxrs.utils.annotation.Pretty;
 import demo.jaxrs.utils.annotation.TokenAuthenticated;
 
 import javax.annotation.security.RolesAllowed;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.io.File;
@@ -146,4 +147,12 @@ public interface CustomerServiceJersey {
     @Path("customers/generic")
     @Produces(MediaType.APPLICATION_JSON)
     Response getCustomerList();
+
+    @POST
+    @Path("token")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    Response authenticateUser(@NotNull
+                              @FormParam("username") String username, @NotNull
+                              @FormParam("password") String password);
 }
